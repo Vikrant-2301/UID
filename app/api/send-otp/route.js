@@ -24,11 +24,21 @@ export async function POST(req) {
   });
 
   await transporter.sendMail({
-    from: process.env.EMAIL_ID,
-    to: email,
-    subject: "Your OTP for UID verification",
-    text: `Your OTP is: ${otp}`,
-  });
+  from: `"DiscoverArch Team" <${process.env.EMAIL_ID}>`,
+  to: email,
+  subject: "Your DiscoverArch OTP for Verification",
+  html: `
+    <p>Hi,</p>
+    <p>Your One-Time Password (OTP) for verifying your UID on <strong>DiscoverArch</strong> is:</p>
+    <h2 style="color: #4CAF50;">${otp}</h2>
+    <p>Please enter this OTP to complete your verification. <strong>Do not share</strong> this code with anyone.</p>
+    <p>This OTP is valid for the next <strong>10 minutes</strong>.</p>
+    <p>If you did not request this, please ignore this email.</p>
+    <br/>
+    <p>Thanks,<br/>DiscoverArch Team</p>
+  `,
+});
+
 
   return Response.json({ success: true });
 }
