@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { setOtp } from "@/lib/otpStore";
+import { setOtp, getOtpTimestamp } from "@/lib/otpStore";
 import { fetchUserMap } from "@/lib/fetchUserMap";
 
 export async function POST(req) {
@@ -11,8 +11,17 @@ export async function POST(req) {
     return Response.json({ success: false, message: "Email not registered." });
   }
 
+  // Rate limiting: block if requested within last 30s
+  const lastOtpTime = await getOtpTimestamp(userEmail);
+  if (lastOtpTime && Date.now() - lastOtpTime < 30 * 1000) {
+    return Response.json({
+      success: false,
+      message: "Please wait before requesting a new OTP.",
+    });
+  }
+
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  setOtp(userEmail, otp);
+  await setOtp(userEmail, otp);
   console.log(`OTP for ${userEmail}: ${otp}`);
 
   const transporter = nodemailer.createTransport({
@@ -24,21 +33,11 @@ export async function POST(req) {
   });
 
   await transporter.sendMail({
-  from: `"DiscoverArch Team" <${process.env.EMAIL_ID}>`,
-  to: email,
-  subject: "Your DiscoverArch OTP for Verification",
-  html: `
-    <p>Hi,</p>
-    <p>Your One-Time Password (OTP) for verifying your UID on <strong>DiscoverArch</strong> is:</p>
-    <h2 style="color: #4CAF50;">${otp}</h2>
-    <p>Please enter this OTP to complete your verification. <strong>Do not share</strong> this code with anyone.</p>
-    <p>This OTP is valid for the next <strong>10 minutes</strong>.</p>
-    <p>If you did not request this, please ignore this email.</p>
-    <br/>
-    <p>Thanks,<br/>DiscoverArch Team</p>
-  `,
-});
-
+    from: process.env.EMAIL_ID,
+    to: email,
+    subject: "Your OTP for UID verification",
+    text: `Your OTP is: ${otp}`,
+  });
 
   return Response.json({ success: true });
 }
